@@ -41,7 +41,7 @@ class FocalStatistics():
 
         
     def updateRasterInfo(self, **kwargs):
-        kwargs['output_info']['resampling'] = True
+        kwargs['output_info']['resampling'] = False
         kwargs['output_info']['cellSize'] = tuple(np.multiply(kwargs['raster_info']['cellSize'], self.factor))
         kwargs['output_info']['statistics'] = () 
         kwargs['output_info']['histogram'] = ()
@@ -51,14 +51,30 @@ class FocalStatistics():
         
 
     def updatePixels(self, tlc, shape, props, **pixelBlocks):
-        s = slice(None, None, self.factor)
         p = pixelBlocks['raster_pixels']
         m = pixelBlocks['raster_mask']
+        
+        self.emit("Trace|Request Input Blocks|{0}\n".format(pixelBlocks['raster_pixels'].shape))
+        
+        # get pixel blocks
+        sz = p.itemsize
+        h,w = p.shape
+        shapebl = (h/self.factor, w/self.factor, self.factor, self.factor)
+        strides = sz*np.array([w*self.factor, self.factor, w, 1])
+        blocks = np.lib.stride_tricks.as_strided(p, shape=shapebl, strides=strides)
 
-        pixelBlocks['output_pixels'] = p[s, s].astype(props['pixelType'])
-        pixelBlocks['output_mask'] = m[s, s].astype('u1')
+        # get sum
+        bstat=blocks.sum(axis=3)
+        bstat=bstat.sum(axis=2)
+        
+        #average
+        bstat=bstat/self.factor**2
+        
+        pixelBlocks['output_pixels'] = bstat.astype(props['pixelType'])     
 
         self.emit("Trace|Request Raster|{0}\n".format(props))
         self.emit("Trace|Request Size|{0}\n".format(shape))
+        self.emit("Trace|Request Input Blocks|{0}\n".format(pixelBlocks['raster_pixels'].shape))
+        self.emit("Trace|Request Blocks|{0}\n".format(pixelBlocks['output_pixels'].shape))
         return pixelBlocks
 
