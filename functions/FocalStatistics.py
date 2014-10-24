@@ -34,8 +34,8 @@ class FocalStatistics():
                 'name': 'op',
                 'dataType': 'string',
                 'value': 'Average',
-                'required': False,
-                'domain': ('Average', 'Max', 'Min'),
+                'required': True,
+                'domain': ('Average', 'Max', 'Min', 'Standard deviation', 'Range'),
                 'displayName': "Statistics",
                 'description': "The type of statistic that will be calculated for the output pixel"
             },
@@ -58,7 +58,11 @@ class FocalStatistics():
             self.op = np.min
         elif s == 'max': 
             self.op = np.max
-               
+        elif s == 'standard deviation':
+            self.op = np.std
+        elif s == 'range':
+            self.op = np.subtract
+                           
         kwargs['output_info']['resampling'] = False
         kwargs['output_info']['cellSize'] = tuple(np.multiply(kwargs['raster_info']['cellSize'], self.factor))
         kwargs['output_info']['statistics'] = () 
@@ -80,13 +84,16 @@ class FocalStatistics():
         blocks = np.lib.stride_tricks.as_strided(p, shape=shapebl, strides=strides)
 
         # get statistic
-        bstat = self.op(blocks, axis=3)
-        bstat = self.op(bstat, axis=2)        
+        if self.op == np.subtract :
+            bstat = self.op(np.max(blocks, axis=(2,3)), np.min(blocks, axis=(2,3)))
+        else:
+            bstat = self.op(blocks, axis=(2,3))    
       
         pixelBlocks['output_pixels'] = bstat.astype(props['pixelType'])      
 
         self.emit("Trace|Request Raster|{0}\n".format(props))
         self.emit("Trace|Request Size|{0}\n".format(shape))
+        self.emit("Trace|Request Operation|{0}\n".format(self.op))
        
         return pixelBlocks
 
