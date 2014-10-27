@@ -82,12 +82,13 @@ class FocalStatistics():
         shapebl = (h/self.factor, w/self.factor, self.factor, self.factor)
         strides = sz*np.array([w*self.factor, self.factor, w, 1])
         blocks = np.lib.stride_tricks.as_strided(p, shape=shapebl, strides=strides)
-
+        axes=(len(blocks.shape)-2, len(blocks.shape)-1)
+        
         # get statistic
         if self.op == np.subtract :
-            bstat = self.op(np.max(blocks, axis=(2,3)), np.min(blocks, axis=(2,3)))
+            bstat = self.op(np.max(blocks, axis=axes), np.min(blocks, axis=axes))
         else:
-            bstat = self.op(blocks, axis=(2,3))    
+            bstat = self.op(blocks, axis=axes)    
       
         pixelBlocks['output_pixels'] = bstat.astype(props['pixelType'])      
 
